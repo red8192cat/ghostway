@@ -1,0 +1,14 @@
+# Real secrets — never commit this
+.env
+
+# TLS cache and runtime data (populated at runtime by Docker volumes)
+data/
+
+# Editor and OS junk
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db

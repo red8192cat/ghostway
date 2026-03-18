@@ -1,0 +1,4 @@
+reverse_proxy {env.MASK_PROXY_TARGET} {
+	header_up Host {upstream_hostport}
+	header_up X-Real-IP {remote_host}
+}

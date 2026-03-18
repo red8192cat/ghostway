@@ -1,0 +1,29 @@
+# ghostway — Caddyfile
+# Caddy runs on port 8443 inside Docker — never exposed to the internet directly.
+# telemt owns :443 and TCP-splices non-MTProxy traffic here.
+# Port 80 is exposed only for ACME HTTP-01 Let's Encrypt renewal.
+
+{env.DOMAIN}:8443 {
+	tls {
+		# Caddy fetches and renews the certificate automatically via HTTP-01.
+		# Certificate lives in the caddy-data volume — survives restarts.
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	log {
+		output discard
+	}
+
+	import /etc/caddy/mask.caddy
+}
+
+http://{env.DOMAIN} {
+	redir https://{env.DOMAIN}{uri} permanent
+}

@@ -1,0 +1,120 @@
+# ghostway — invisible MTProxy stack: telemt (FakeTLS) → xray (VLESS+Reality) → Telegram
+# All configuration lives in .env — edit that file before first launch.
+
+name: ghostway
+
+services:
+
+  xray:
+    image: ghcr.io/xtls/xray-core:latest
+    container_name: xray
+    restart: unless-stopped
+    entrypoint: ["/entrypoint/xray-entrypoint.sh"]
+    env_file: .env
+    volumes:
+      - ./xray.json:/etc/xray/config.json.tpl:ro
+      - ./xray-entrypoint.sh:/entrypoint/xray-entrypoint.sh:ro
+    networks:
+      - proxy-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    healthcheck:
+      test: ["CMD-SHELL", "echo '' | nc -w1 127.0.0.1 1080 && echo ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    entrypoint: ["/entrypoint/caddy-entrypoint.sh"]
+    env_file: .env
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./mask.static.caddy:/etc/caddy/snippets/mask.static.caddy:ro
+      - ./mask.proxy.caddy:/etc/caddy/snippets/mask.proxy.caddy:ro
+      - ./caddy-entrypoint.sh:/entrypoint/caddy-entrypoint.sh:ro
+      - ./site:/srv/site:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - proxy-net
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  telemt:
+    image: ghcr.io/telemt/telemt:latest
+    container_name: telemt
+    restart: unless-stopped
+    entrypoint: ["/entrypoint/telemt-entrypoint.sh"]
+    env_file: .env
+    ports:
+      - "443:443"
+      # Uncomment to expose API to host:
+      # - "127.0.0.1:9091:9091"
+    volumes:
+      - ./telemt.toml:/run/telemt/telemt.toml.tpl:ro
+      - ./telemt-entrypoint.sh:/entrypoint/telemt-entrypoint.sh:ro
+      - telemt-cache:/data
+    working_dir: /run/telemt
+    tmpfs:
+      - /run/telemt:rw,mode=1777,size=10m
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      xray:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
+    networks:
+      - proxy-net
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+volumes:
+  telemt-cache:
+    driver: local
+  caddy-data:
+    # Contains the TLS certificate — never remove with "docker compose down -v"
+    driver: local
+  caddy-config:
+    driver: local
+
+networks:
+  proxy-net:
+    driver: bridge
+    enable_ipv6: false

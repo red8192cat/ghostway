@@ -1,0 +1,37 @@
+# ghostway — telemt config
+[general]
+use_middle_proxy = true
+prefer_ipv6 = false
+
+[general.modes]
+classic = false
+secure = false
+tls = true
+
+[general.links]
+show = "*"
+
+[server]
+port = 443
+
+[server.api]
+enabled = true
+listen = "0.0.0.0:9091"
+whitelist = ["127.0.0.0/8", "172.16.0.0/12", "10.0.0.0/8"]
+
+[censorship]
+tls_domain = "${DOMAIN}"
+mask_host = "caddy"
+mask_port = 8443
+mask = true
+tls_emulation = true
+tls_front_dir = "/data/tlsfront"
+
+[access.users]
+hello = "${PROXY_SECRET}"
+
+[[upstreams]]
+type = "socks5"
+address = "xray:1080"
+weight = 1
+enabled = true
