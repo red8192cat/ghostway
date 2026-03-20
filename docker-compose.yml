@@ -48,10 +48,11 @@ services:
       - 1.1.1.1
       - 8.8.8.8
     healthcheck:
-      test: ["CMD-SHELL", "echo '' | nc -w1 127.0.0.1 1080 && echo ok"]
-      interval: 5s
+      # Check that xray process is still running (scratch image has no nc/wget)
+      test: ["CMD-SHELL", "test -d /proc/1 && cat /proc/1/status | grep -q Xray || kill -0 1"]
+      interval: 10s
       timeout: 3s
-      retries: 10
+      retries: 3
       start_period: 5s
 
   caddy:
