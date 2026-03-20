@@ -31,8 +31,10 @@ services:
     depends_on:
       init:
         condition: service_completed_successfully
+    # Override default split-config dir with our single generated config file
+    command: ["xray", "run", "-config", "/etc/ghostway/xray.json"]
     volumes:
-      - generated:/etc/xray:ro
+      - generated:/etc/ghostway:ro
     networks:
       - proxy-net
     cap_drop:
