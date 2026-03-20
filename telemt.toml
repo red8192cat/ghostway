@@ -23,7 +23,7 @@ whitelist = ["127.0.0.0/8", "172.16.0.0/12", "10.0.0.0/8"]
 [censorship]
 tls_domain = "${DOMAIN}"
 mask_host = "caddy"
-mask_port = 8443
+mask_port = 443
 mask = true
 tls_emulation = true
 tls_front_dir = "/data/tlsfront"

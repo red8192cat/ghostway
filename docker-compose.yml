@@ -70,6 +70,7 @@ services:
       "
     ports:
       - "80:80"
+      - "8443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./mask.static.caddy:/etc/caddy/snippets/mask.static.caddy:ro
