@@ -10,7 +10,7 @@ tls = true
 
 [general.links]
 show = "*"
-public_host = "${PUBLIC_HOST}"
+public_host = "${DOMAIN}"
 
 [server]
 port = 443
