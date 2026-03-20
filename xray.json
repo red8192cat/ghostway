@@ -27,7 +27,7 @@
         "vnext": [
           {
             "address": "${XRAY_SERVER_IP}",
-            "port": "${XRAY_SERVER_PORT}",
+            "port": ${XRAY_SERVER_PORT},
             "users": [
               {
                 "id": "${XRAY_UUID}",
