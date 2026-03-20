@@ -112,11 +112,12 @@ services:
       # Uncomment to expose API to host:
       # - "127.0.0.1:9091:9091"
     volumes:
-      - generated:/run/telemt:ro
+      - generated:/etc/telemt:ro
       - telemt-cache:/data
     working_dir: /run/telemt
     tmpfs:
       - /run/telemt:rw,mode=1777,size=10m
+    command: ["telemt", "/etc/telemt/telemt.toml"]
     environment:
       - RUST_LOG=info
     networks:
