@@ -5,21 +5,43 @@ name: ghostway
 
 services:
 
+  # Init container: runs once, substitutes env vars into configs, then exits.
+  # Uses alpine (has envsubst via gettext package) — never touches production images.
+  init:
+    image: alpine:3.19
+    container_name: ghostway-init
+    restart: "no"
+    env_file: .env
+    volumes:
+      - ./xray.json:/templates/xray.json.tpl:ro
+      - ./telemt.toml:/templates/telemt.toml.tpl:ro
+      - generated:/generated
+    command: >
+      sh -c "
+        apk add --no-cache gettext > /dev/null 2>&1 &&
+        envsubst < /templates/xray.json.tpl > /generated/xray.json &&
+        envsubst < /templates/telemt.toml.tpl > /generated/telemt.toml &&
+        echo 'ghostway: configs generated'
+      "
+
   xray:
     image: ghcr.io/xtls/xray-core:latest
     container_name: xray
     restart: unless-stopped
-    entrypoint: ["/entrypoint/xray-entrypoint.sh"]
-    env_file: .env
+    depends_on:
+      init:
+        condition: service_completed_successfully
     volumes:
-      - ./xray.json:/etc/xray/config.json.tpl:ro
-      - ./xray-entrypoint.sh:/entrypoint/xray-entrypoint.sh:ro
+      - generated:/etc/xray:ro
     networks:
       - proxy-net
     cap_drop:
       - ALL
+    read_only: true
     security_opt:
       - no-new-privileges:true
+    tmpfs:
+      - /tmp
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -34,15 +56,25 @@ services:
     image: caddy:2-alpine
     container_name: caddy
     restart: unless-stopped
-    entrypoint: ["/entrypoint/caddy-entrypoint.sh"]
     env_file: .env
+    # Switch mask mode by copying the right snippet before caddy starts.
+    # MASK_MODE=static (default) → serves site/index.html
+    # MASK_MODE=proxy            → reverse-proxy to MASK_PROXY_TARGET
+    command: >
+      sh -c "
+        if [ "$$MASK_MODE" = 'proxy' ]; then
+          cp /etc/caddy/snippets/mask.proxy.caddy /etc/caddy/mask.caddy;
+        else
+          cp /etc/caddy/snippets/mask.static.caddy /etc/caddy/mask.caddy;
+        fi &&
+        caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+      "
     ports:
       - "80:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./mask.static.caddy:/etc/caddy/snippets/mask.static.caddy:ro
       - ./mask.proxy.caddy:/etc/caddy/snippets/mask.proxy.caddy:ro
-      - ./caddy-entrypoint.sh:/entrypoint/caddy-entrypoint.sh:ro
       - ./site:/srv/site:ro
       - caddy-data:/data
       - caddy-config:/config
@@ -68,26 +100,25 @@ services:
     image: ghcr.io/telemt/telemt:latest
     container_name: telemt
     restart: unless-stopped
-    entrypoint: ["/entrypoint/telemt-entrypoint.sh"]
-    env_file: .env
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      xray:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
     ports:
       - "443:443"
       # Uncomment to expose API to host:
       # - "127.0.0.1:9091:9091"
     volumes:
-      - ./telemt.toml:/run/telemt/telemt.toml.tpl:ro
-      - ./telemt-entrypoint.sh:/entrypoint/telemt-entrypoint.sh:ro
+      - generated:/run/telemt:ro
       - telemt-cache:/data
     working_dir: /run/telemt
     tmpfs:
       - /run/telemt:rw,mode=1777,size=10m
     environment:
       - RUST_LOG=info
-    depends_on:
-      xray:
-        condition: service_healthy
-      caddy:
-        condition: service_healthy
     networks:
       - proxy-net
     cap_drop:
@@ -106,6 +137,8 @@ services:
         hard: 65536
 
 volumes:
+  generated:
+    driver: local
   telemt-cache:
     driver: local
   caddy-data:
