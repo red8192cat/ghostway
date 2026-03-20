@@ -47,13 +47,9 @@ services:
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    healthcheck:
-      # Check that xray process is still running (scratch image has no nc/wget)
-      test: ["CMD-SHELL", "test -d /proc/1 && cat /proc/1/status | grep -q Xray || kill -0 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
+    # No healthcheck possible — scratch image has no shell or network tools.
+    # xray is considered healthy if the process starts without error.
+    # telemt depends on xray via service_started (not service_healthy).
 
   caddy:
     image: caddy:2-alpine
@@ -108,7 +104,7 @@ services:
       init:
         condition: service_completed_successfully
       xray:
-        condition: service_healthy
+        condition: service_started
       caddy:
         condition: service_healthy
     ports:
