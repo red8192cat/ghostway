@@ -3,7 +3,7 @@
 # telemt owns :443 and TCP-splices non-MTProxy traffic here.
 # Port 80 is exposed only for ACME HTTP-01 Let's Encrypt renewal.
 
-{env.DOMAIN}:8443 {
+{$DOMAIN}:8443 {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -19,6 +19,6 @@
 	import /etc/caddy/mask.caddy
 }
 
-http://{env.DOMAIN} {
-	redir https://{env.DOMAIN}{uri} permanent
+http://{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
 }

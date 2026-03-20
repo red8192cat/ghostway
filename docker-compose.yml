@@ -90,10 +90,11 @@ services:
       - 1.1.1.1
       - 8.8.8.8
     healthcheck:
-      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
-      interval: 30s
+      # Check that caddy process is running and HTTP port is accepting connections
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80 > /dev/null 2>&1 || nc -z 127.0.0.1 80"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 6
       start_period: 15s
 
   telemt:
