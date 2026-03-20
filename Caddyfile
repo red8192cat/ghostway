@@ -4,11 +4,6 @@
 # Port 80 is exposed only for ACME HTTP-01 Let's Encrypt renewal.
 
 {env.DOMAIN}:8443 {
-	tls {
-		# Caddy fetches and renews the certificate automatically via HTTP-01.
-		# Certificate lives in the caddy-data volume — survives restarts.
-	}
-
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
